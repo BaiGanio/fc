@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Food Energy & Cost Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    input { margin: 0.5em; }
+    .result { margin-top: 1em; padding: 1em; border: 1px solid #ccc; }
+    canvas { margin-top: 2em; }
+  </style>
+</head>
+<body>
+  <h2>Food Loss & Waste Energy + Cost Calculator</h2>
+  <label>Years: <input id="years" type="number" value="40"></label><br>
+  <label>Weight (kg): <input id="weight" type="number" value="62"></label><br>
+  <button onclick="calculate()">Calculate</button>
+
+  <div class="result" id="output"></div>
+
+  <canvas id="energyChart" width="400" height="200"></canvas>
+  <canvas id="costChart" width="400" height="200"></canvas>
+
+  <script>
+    let energyChart, costChart;
+
+    function calculate() {
+      const years = parseInt(document.getElementById('years').value);
+      const weight = parseFloat(document.getElementById('weight').value);
+
+      // Step 1: Daily need
+      const dailyNeed = 24 * weight * 1.5; // kcal/day
+      const need = dailyNeed * 365 * years;
+
+      // Step 2: Consumed (+20%)
+      const consumed = need * 1.20;
+
+      // Step 3: Purchased (÷ (1 - 0.19))
+      const purchased = consumed / (1 - 0.19);
+
+      // Step 4: Produced (÷ (1 - 0.132))
+      const produced = purchased / (1 - 0.132);
+
+      // Step 5: Cost ranges (€ per 1000 kcal)
+      const units = purchased / 1000;
+      const stapleCost = units * 4;
+      const mixedCost = units * 10;
+      const premiumCost = units * 16;
+      const bulgariaCostLow = units * 6;
+      const bulgariaCostHigh = units * 8;
+
+      const fmt = n => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+      document.getElementById('output').innerHTML = `
+        <strong>Results for ${years} years at ${weight} kg:</strong><br>
+        Metabolic need: ${fmt(need)} kcal<br>
+        Actual consumed (+20%): ${fmt(consumed)} kcal<br>
+        Purchased (with downstream waste): ${fmt(purchased)} kcal<br>
+        Produced (with upstream + downstream losses): ${fmt(produced)} kcal<br>
+        <br>
+        <em>Estimated food cost over ${years} years:</em><br>
+        Staple-heavy diet (€4/1000 kcal): €${fmt(stapleCost)}<br>
+        Mixed EU diet (€10/1000 kcal): €${fmt(mixedCost)}<br>
+        Premium diet (€16/1000 kcal): €${fmt(premiumCost)}<br>
+        Bulgaria mixed (€6–8/1000 kcal): €${fmt(bulgariaCostLow)} – €${fmt(bulgariaCostHigh)}
+      `;
+
+      // --- Energy Chart ---
+      const energyData = [need, consumed, purchased, produced];
+      const energyLabels = ["Need", "Consumed", "Purchased", "Produced"];
+
+      if (energyChart) energyChart.destroy();
+      energyChart = new Chart(document.getElementById('energyChart'), {
+        type: 'bar',
+        data: {
+          labels: energyLabels,
+          datasets: [{
+            label: 'Calories (millions)',
+            data: energyData.map(v => v / 1e6),
+            backgroundColor: ['#4caf50','#2196f3','#ff9800','#f44336']
+          }]
+        },
+        options: {
+          plugins: { title: { display: true, text: 'Food Energy Stages (millions kcal)' } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+
+      // --- Cost Chart ---
+      const costData = [stapleCost, mixedCost, premiumCost, bulgariaCostLow, bulgariaCostHigh];
+      const costLabels = ["Staple", "Mixed EU", "Premium", "BG Low", "BG High"];
+
+      if (costChart) costChart.destroy();
+      costChart = new Chart(document.getElementById('costChart'), {
+        type: 'bar',
+        data: {
+          labels: costLabels,
+          datasets: [{
+            label: 'Cost (€)',
+            data: costData.map(v => v / 1000), // show in thousands €
+            backgroundColor: ['#8bc34a','#03a9f4','#e91e63','#9c27b0','#673ab7']
+          }]
+        },
+        options: {
+          plugins: { title: { display: true, text: 'Food Cost Ranges (thousands €)' } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
